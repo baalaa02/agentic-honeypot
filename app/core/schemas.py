@@ -1,27 +1,23 @@
-# TODO: Define request and response schemas
-
-from typing import List, Optional
 from pydantic import BaseModel
-
-
-# -------- Incoming request schemas --------
+from typing import List, Optional
 
 class Message(BaseModel):
-    sender: str            # "scammer" or "user"
-    text: str              # message content
-    timestamp: str         # ISO-8601 string
-
+    sender: str
+    text: str
+    timestamp: str
 
 class Metadata(BaseModel):
-    channel: Optional[str] = None   # SMS / WhatsApp / Email
-    language: Optional[str] = None  # English, Tamil, etc.
-    locale: Optional[str] = None    # IN, US, etc.
-
+    channel: Optional[str] = None
+    language: Optional[str] = None
+    locale: Optional[str] = None
 
 class IncomingRequest(BaseModel):
     message: Message
-    conversationHistory: List[Message]
+    conversationHistory: List[Message] = Field(default_factory=list)
     metadata: Optional[Metadata] = None
+
+    class Config:
+        extra = "ignore"
 
 
 # -------- Outgoing response schemas --------
