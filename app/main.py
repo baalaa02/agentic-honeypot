@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+from typing import Optional
+
 from app.core.schemas import (
     IncomingRequest,
     FinalResponse,
@@ -12,7 +14,7 @@ app = FastAPI()
 
 
 @app.post("/api/v1/message", response_model=FinalResponse)
-async def post_message(request: IncomingRequest):
+async def post_message(request: Optional[IncomingRequest] = None):
 
     # ---- Phase 6 guard: tolerate empty / malformed input ----
     if not request.message or not request.message.text:
