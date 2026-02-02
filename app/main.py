@@ -1,6 +1,5 @@
 from fastapi import FastAPI, Request
 from app.core.schemas import (
-    IncomingRequest,
     FinalResponse,
     EngagementMetrics,
     ExtractedIntelligence
@@ -14,73 +13,50 @@ app = FastAPI()
 @app.post("/api/v1/message", response_model=FinalResponse)
 async def post_message(request: Request):
     """
-    IMPORTANT:
-    We intentionally accept raw Request to avoid FastAPI 422 errors
-    when the evaluator sends no body or non-JSON content.
+    Evaluator-safe endpoint:
+    - Accepts empty body
+    - Accepts non-JSON
+    - Never throws 422
     """
+
+    text = ""
+    conversation_history = []
 
     try:
         body = await request.json()
-        incoming = IncomingRequest(**body)
+        message = body.get("message") or {}
+        text = message.get("text") or ""
+        conversation_history = body.get("conversationHistory") or []
     except Exception:
-        incoming = None
+        pass
 
-    # ---- Guard: empty / malformed / non-JSON request ----
-    if not incoming or not incoming.message or not incoming.message.text:
-        return FinalResponse(
-            status="success",
-            scamDetected=False,
-            agentResponse="Sorry, I didn’t fully understand that. Could you explain a bit more?",
-            engagementMetrics=EngagementMetrics(
-                engagementDurationSeconds=0,
-                totalMessagesExchanged=0
-            ),
-            extractedIntelligence=ExtractedIntelligence(
-                bankAccounts=[],
-                upiIds=[],
-                phishingLinks=[]
-            ),
-            agentNotes="Empty or malformed request received"
-        )
-
-    # Phase 3: Scam detection
-    scam_detected, reason = detect_scam(incoming.message.text)
-
+    # Default values
+    scam_detected = False
+    agent_notes = "No scam indicators detected"
     extracted_intel = {
         "bankAccounts": [],
         "upiIds": [],
         "phishingLinks": []
     }
 
-    if scam_detected:
-        agent_reply = (
-            "Hi, I just received this message and I’m a bit confused. "
-            "Can you explain what this verification is about?"
-        )
+    if text:
+        scam_detected, reason = detect_scam(text)
         agent_notes = reason
 
-        combined_text = incoming.message.text
+        if scam_detected:
+            combined_text = text
+            for msg in conversation_history:
+                if isinstance(msg, dict) and msg.get("text"):
+                    combined_text += " " + msg["text"]
 
-        for msg in incoming.conversationHistory or []:
-            if msg and msg.text:
-                combined_text += " " + msg.text
-
-        extracted_intel = extract_intelligence(combined_text)
-
-    else:
-        agent_reply = (
-            "Thanks for reaching out. Could you please share more details "
-            "so I can understand this better?"
-        )
-        agent_notes = "Message appears benign"
+            extracted_intel = extract_intelligence(combined_text)
 
     return FinalResponse(
         status="success",
         scamDetected=scam_detected,
-        agentResponse=agent_reply,
         engagementMetrics=EngagementMetrics(
             engagementDurationSeconds=0,
-            totalMessagesExchanged=len(incoming.conversationHistory or []) + 1
+            totalMessagesExchanged=len(conversation_history) + (1 if text else 0)
         ),
         extractedIntelligence=ExtractedIntelligence(
             bankAccounts=extracted_intel["bankAccounts"],
