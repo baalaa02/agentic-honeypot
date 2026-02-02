@@ -13,8 +13,26 @@ app = FastAPI()
 
 @app.post("/api/v1/message", response_model=FinalResponse)
 async def post_message(request: IncomingRequest):
-    # Phase 3: Scam detection + basic agent handoff logic
 
+    # ---- Phase 6 guard: tolerate empty / malformed input ----
+    if not request.message or not request.message.text:
+        return FinalResponse(
+            status="success",
+            scamDetected=False,
+            agentResponse="Sorry, I didn’t fully understand that. Could you explain a bit more?",
+            engagementMetrics=EngagementMetrics(
+                engagementDurationSeconds=0,
+                totalMessagesExchanged=0
+            ),
+            extractedIntelligence=ExtractedIntelligence(
+                bankAccounts=[],
+                upiIds=[],
+                phishingLinks=[]
+            ),
+            agentNotes="Empty or malformed request received"
+        )
+
+    # Phase 3: Scam detection
     scam_detected, reason = detect_scam(request.message.text)
 
     extracted_intel = {
@@ -30,11 +48,12 @@ async def post_message(request: IncomingRequest):
         )
         agent_notes = reason
 
-        # Phase 4: Intelligence Extraction (deterministic, regex-based)
+        # Phase 4: Intelligence extraction (safe)
         combined_text = request.message.text
 
-        for msg in request.conversationHistory:
-            combined_text += " " + msg.text
+        for msg in request.conversationHistory or []:
+            if msg and msg.text:
+                combined_text += " " + msg.text
 
         extracted_intel = extract_intelligence(combined_text)
 
@@ -51,7 +70,7 @@ async def post_message(request: IncomingRequest):
         agentResponse=agent_reply,
         engagementMetrics=EngagementMetrics(
             engagementDurationSeconds=0,
-            totalMessagesExchanged=len(request.conversationHistory) + 1
+            totalMessagesExchanged=len(request.conversationHistory or []) + 1
         ),
         extractedIntelligence=ExtractedIntelligence(
             bankAccounts=extracted_intel["bankAccounts"],

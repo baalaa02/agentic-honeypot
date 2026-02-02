@@ -5,9 +5,12 @@ from typing import List, Optional
 # -------- Incoming request schemas --------
 
 class Message(BaseModel):
-    sender: str
-    text: str
+    sender: Optional[str] = None
+    text: Optional[str] = None
     timestamp: Optional[str] = None
+
+    class Config:
+        extra = "ignore"
 
 
 class Metadata(BaseModel):
@@ -15,10 +18,13 @@ class Metadata(BaseModel):
     language: Optional[str] = None
     locale: Optional[str] = None
 
+    class Config:
+        extra = "ignore"
+
 
 class IncomingRequest(BaseModel):
-    message: Message
-    conversationHistory: List[Message] = Field(default_factory=list)
+    message: Optional[Message] = None
+    conversationHistory: Optional[List[Message]] = Field(default_factory=list)
     metadata: Optional[Metadata] = None
 
     class Config:
