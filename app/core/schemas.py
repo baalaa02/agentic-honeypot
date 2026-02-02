@@ -1,15 +1,20 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
+
+# -------- Incoming request schemas --------
+
 class Message(BaseModel):
     sender: str
     text: str
-    timestamp: str
+    timestamp: Optional[str] = None
+
 
 class Metadata(BaseModel):
     channel: Optional[str] = None
     language: Optional[str] = None
     locale: Optional[str] = None
+
 
 class IncomingRequest(BaseModel):
     message: Message
