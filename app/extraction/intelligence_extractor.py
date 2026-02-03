@@ -1,5 +1,3 @@
-# TODO: Implement intelligence extraction logic
-
 # app/extraction/intelligence_extractor.py
 
 import re
@@ -24,14 +22,30 @@ def extract_intelligence(text: str) -> Dict[str, List[str]]:
     Extracts scam-related intelligence from text using deterministic patterns.
     """
 
-    bank_accounts = BANK_ACCOUNT_REGEX.findall(text)
-    upi_ids = UPI_REGEX.findall(text)
-    phishing_links = PHISHING_LINK_REGEX.findall(text)
+    bank_accounts_raw = BANK_ACCOUNT_REGEX.findall(text)
+    upi_ids_raw = UPI_REGEX.findall(text)
+    phishing_links_raw = PHISHING_LINK_REGEX.findall(text)
 
-    # Normalize results
-    bank_accounts = list(set([b.replace(" ", "").replace("-", "") for b in bank_accounts]))
-    upi_ids = list(set(upi_ids))
-    phishing_links = list(set(phishing_links))
+    # Normalize bank accounts: remove spaces/dashes, keep realistic lengths
+    bank_accounts = []
+    for acc in bank_accounts_raw:
+        cleaned = acc.replace(" ", "").replace("-", "")
+        if 9 <= len(cleaned) <= 18:
+            bank_accounts.append(cleaned)
+
+    # Normalize UPI IDs
+    upi_ids = [u.strip() for u in upi_ids_raw]
+
+    # Normalize phishing links
+    phishing_links = []
+    for link in phishing_links_raw:
+        normalized = link.lower().rstrip(".,)]}")
+        phishing_links.append(normalized)
+
+    # Deduplicate + deterministic ordering
+    bank_accounts = sorted(set(bank_accounts))
+    upi_ids = sorted(set(upi_ids))
+    phishing_links = sorted(set(phishing_links))
 
     return {
         "bankAccounts": bank_accounts,

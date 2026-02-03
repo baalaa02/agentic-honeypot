@@ -1,33 +1,36 @@
-# TODO: Implement scam detection logic
-
 # app/detection/scam_detector.py
 
 from typing import Tuple
 
-SCAM_KEYWORDS = [
-    "account will be blocked",
-    "verify immediately",
-    "share your upi",
-    "kyc update",
-    "click the link",
-    "urgent action",
-    "suspended today",
-    "bank alert",
-    "limited time",
-    "confirm now",
-]
+# Keyword → tactic mapping
+SCAM_PATTERNS = {
+    "account will be blocked": "Fear-based account suspension tactic",
+    "suspended today": "Fear-based account suspension tactic",
+    "bank alert": "Authority impersonation tactic",
+    "verify immediately": "Urgency-driven compliance pressure",
+    "urgent action": "Urgency-driven compliance pressure",
+    "limited time": "Artificial deadline manipulation",
+    "confirm now": "Immediate action coercion",
+    "share your upi": "Payment redirection attempt via UPI",
+    "kyc update": "Fake compliance or KYC update narrative",
+    "click the link": "Phishing redirection attempt",
+}
 
 def detect_scam(message_text: str) -> Tuple[bool, str]:
     """
-    Simple rule-based scam detector.
+    Simple deterministic scam detector.
     Returns:
         scam_detected (bool)
         reason (str)
     """
-    text = message_text.lower()
 
-    for keyword in SCAM_KEYWORDS:
+    if not message_text:
+        return False, "Empty message content"
+
+    text = message_text.lower().strip()
+
+    for keyword, tactic in SCAM_PATTERNS.items():
         if keyword in text:
-            return True, f"Matched scam keyword: '{keyword}'"
+            return True, tactic
 
     return False, "No scam patterns detected"
